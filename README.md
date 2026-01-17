@@ -1,8 +1,8 @@
-# 📝 To-Do App
+# 📝 TaskMaster
 
 > Um aplicativo moderno de gerenciamento de tarefas focado em produtividade e simplicidade.
 
-Bem-vindo ao **To-Do App**, uma solução ágil para organizar seu dia a dia. Desenvolvido com as tecnologias mais recentes do ecossistema React, este projeto oferece uma interface limpa, responsiva e totalmente integrada com serviços em nuvem para garantir que seus dados estejam sempre acessíveis.
+Bem-vindo ao **TaskMaster**, uma solução ágil para organizar seu dia a dia. Desenvolvido com as tecnologias mais recentes do ecossistema React, este projeto oferece uma interface limpa, responsiva e totalmente integrada com serviços em nuvem para garantir que seus dados estejam sempre acessíveis.
 
 ## 🚀 Tecnologias e Stack
 
@@ -54,8 +54,8 @@ Certifique-se de ter instalado em sua máquina:
 1. **Clone o repositório**
 
    ```bash
-   git clone https://github.com/ericrocha97/todo-app.git
-   cd todo-app
+   git clone https://github.com/ericrocha97/task-master.git
+   cd task-master
    ```
 
 2. **Instale as dependências**
