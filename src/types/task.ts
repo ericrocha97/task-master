@@ -1,3 +1,5 @@
+import type { Timestamp } from "firebase/firestore";
+
 export type TagType = "work" | "personal" | "projects";
 
 export type PriorityType = "low" | "medium" | "high";
@@ -10,7 +12,17 @@ export interface Task {
   id: string;
   title: string;
   completed: boolean;
-  createdAt: string;
+  createdAt: Date;
+  dueDate?: string;
+  tag?: TagType;
+  priority?: PriorityType;
+}
+
+// Task data as stored in Firestore (before conversion)
+export interface FirestoreTask {
+  title: string;
+  completed: boolean;
+  createdAt: Timestamp;
   dueDate?: string;
   tag?: TagType;
   priority?: PriorityType;

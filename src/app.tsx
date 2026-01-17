@@ -1,10 +1,13 @@
 import { useState } from "react";
+import { Toaster } from "sonner";
 import "./app.css";
+import { AuthGuard } from "@/components/auth/auth-guard";
 import { Header } from "@/components/layout/header";
 import { MainLayout } from "@/components/layout/main-layout";
 import { Sidebar } from "@/components/layout/sidebar";
 import { TaskList } from "@/components/tasks/task-list";
 import { ThemeProvider } from "@/components/theme-provider";
+import { AuthProvider } from "@/contexts/auth-context";
 import { useTasks } from "@/hooks/use-tasks";
 import type { FilterType, PriorityType, SortType, TagType } from "@/types/task";
 
@@ -118,7 +121,12 @@ function TaskApp() {
 function App() {
   return (
     <ThemeProvider defaultTheme="dark" storageKey="taskmaster-theme">
-      <TaskApp />
+      <AuthProvider>
+        <AuthGuard>
+          <TaskApp />
+        </AuthGuard>
+        <Toaster position="bottom-right" richColors />
+      </AuthProvider>
     </ThemeProvider>
   );
 }

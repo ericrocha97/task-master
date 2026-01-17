@@ -1,14 +1,26 @@
-import { useCallback, useMemo } from "react";
+import {
+  addDoc,
+  collection,
+  deleteDoc,
+  doc,
+  onSnapshot,
+  orderBy,
+  query,
+  serverTimestamp,
+  updateDoc,
+} from "firebase/firestore";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { toast } from "sonner";
+import { useAuth } from "@/contexts/auth-context";
+import { db } from "@/lib/firebase";
 import type {
   FilterType,
+  FirestoreTask,
   PriorityType,
   SortType,
   TagType,
   Task,
 } from "@/types/task";
-import { useLocalStorage } from "./use-local-storage";
-
-const STORAGE_KEY = "taskmaster-tasks";
 
 function isToday(date: Date, today: Date): boolean {
   const d = new Date(date);
@@ -79,60 +91,143 @@ function sortTasks(tasks: Task[], sortBy: SortType): Task[] {
         return aPriority - bPriority;
       }
       default: {
-        return (
-          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-        );
+        return b.createdAt.getTime() - a.createdAt.getTime();
       }
     }
   });
 }
 
 export function useTasks() {
-  const [tasks, setTasks] = useLocalStorage<Task[]>(STORAGE_KEY, []);
+  const { user } = useAuth();
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  // Real-time listener for user's tasks
+  useEffect(() => {
+    if (!user) {
+      setTasks([]);
+      setLoading(false);
+      return;
+    }
+
+    const tasksRef = collection(db, "users", user.uid, "tasks");
+    const q = query(tasksRef, orderBy("createdAt", "desc"));
+
+    const unsubscribe = onSnapshot(
+      q,
+      (snapshot) => {
+        const tasksData = snapshot.docs.map((docSnapshot) => {
+          const data = docSnapshot.data() as FirestoreTask;
+          return {
+            id: docSnapshot.id,
+            title: data.title,
+            completed: data.completed,
+            createdAt: data.createdAt?.toDate() ?? new Date(),
+            dueDate: data.dueDate,
+            tag: data.tag,
+            priority: data.priority,
+          } as Task;
+        });
+
+        setTasks(tasksData);
+        setLoading(false);
+      },
+      (error) => {
+        console.error("Error fetching tasks:", error);
+        toast.error("Erro ao carregar tarefas");
+        setLoading(false);
+      }
+    );
+
+    return () => unsubscribe();
+  }, [user]);
 
   const addTask = useCallback(
-    (
+    async (
       title: string,
       options?: { dueDate?: string; tag?: TagType; priority?: PriorityType }
     ) => {
-      const newTask: Task = {
-        id: crypto.randomUUID(),
-        title,
-        completed: false,
-        createdAt: new Date().toISOString(),
-        ...options,
-      };
-      setTasks((prev) => [newTask, ...prev]);
-      return newTask;
+      if (!user) {
+        throw new Error("User not authenticated");
+      }
+
+      try {
+        const tasksRef = collection(db, "users", user.uid, "tasks");
+        const newTask = {
+          title,
+          completed: false,
+          createdAt: serverTimestamp(),
+          ...options,
+        };
+
+        await addDoc(tasksRef, newTask);
+        toast.success("Tarefa criada");
+      } catch (error) {
+        console.error("Error adding task:", error);
+        toast.error("Erro ao criar tarefa");
+        throw error;
+      }
     },
-    [setTasks]
+    [user]
   );
 
   const updateTask = useCallback(
-    (id: string, updates: Partial<Omit<Task, "id" | "createdAt">>) => {
-      setTasks((prev) =>
-        prev.map((task) => (task.id === id ? { ...task, ...updates } : task))
-      );
+    async (id: string, updates: Partial<Omit<Task, "id" | "createdAt">>) => {
+      if (!user) {
+        throw new Error("User not authenticated");
+      }
+
+      try {
+        const taskRef = doc(db, "users", user.uid, "tasks", id);
+        await updateDoc(taskRef, updates);
+        toast.success("Tarefa atualizada");
+      } catch (error) {
+        console.error("Error updating task:", error);
+        toast.error("Erro ao atualizar tarefa");
+        throw error;
+      }
     },
-    [setTasks]
+    [user]
   );
 
   const deleteTask = useCallback(
-    (id: string) => {
-      setTasks((prev) => prev.filter((task) => task.id !== id));
+    async (id: string) => {
+      if (!user) {
+        throw new Error("User not authenticated");
+      }
+
+      try {
+        const taskRef = doc(db, "users", user.uid, "tasks", id);
+        await deleteDoc(taskRef);
+        toast.success("Tarefa excluída");
+      } catch (error) {
+        console.error("Error deleting task:", error);
+        toast.error("Erro ao excluir tarefa");
+        throw error;
+      }
     },
-    [setTasks]
+    [user]
   );
 
   const toggleComplete = useCallback(
-    (id: string) => {
-      setTasks((prev) =>
-        prev.map((task) =>
-          task.id === id ? { ...task, completed: !task.completed } : task
-        )
-      );
+    async (id: string) => {
+      if (!user) {
+        throw new Error("User not authenticated");
+      }
+
+      const task = tasks.find((t) => t.id === id);
+      if (task) {
+        try {
+          const taskRef = doc(db, "users", user.uid, "tasks", id);
+          await updateDoc(taskRef, { completed: !task.completed });
+        } catch (error) {
+          console.error("Error toggling task:", error);
+          toast.error("Erro ao atualizar tarefa");
+          throw error;
+        }
+      }
     },
-    [setTasks]
+    [user, tasks]
   );
 
   const getFilteredTasks = useCallback(
@@ -156,9 +251,9 @@ export function useTasks() {
 
       // Apply search filter
       if (searchQuery.trim()) {
-        const query = searchQuery.toLowerCase();
+        const queryLower = searchQuery.toLowerCase();
         filtered = filtered.filter((task) =>
-          task.title.toLowerCase().includes(query)
+          task.title.toLowerCase().includes(queryLower)
         );
       }
 
@@ -209,6 +304,7 @@ export function useTasks() {
 
   return {
     tasks,
+    loading,
     addTask,
     updateTask,
     deleteTask,

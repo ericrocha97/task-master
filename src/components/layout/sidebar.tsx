@@ -2,8 +2,8 @@ import {
   Calendar,
   CheckCircle2,
   CheckSquare,
-  Clock,
   ListTodo,
+  LogOut,
   Plus,
   Sun,
 } from "lucide-react";
@@ -15,6 +15,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { useAuth } from "@/contexts/auth-context";
 import { cn } from "@/lib/utils";
 import type { FilterType, TagType } from "@/types/task";
 import { TAG_COLORS } from "@/types/task";
@@ -57,6 +58,8 @@ export function Sidebar({
   onNewTask,
   counts,
 }: SidebarProps) {
+  const { user, signOut } = useAuth();
+
   const handleNavClick = (navFilter: FilterType) => {
     onTagChange(null);
     onFilterChange(navFilter);
@@ -206,18 +209,38 @@ export function Sidebar({
         <div className="border-sidebar-border border-t p-3 md:p-4">
           <div className="flex flex-col-reverse items-center gap-3 md:flex-row md:justify-between">
             <div className="flex items-center gap-3">
-              <div className="relative">
-                <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/20 font-medium text-primary text-sm">
-                  <Clock className="h-4 w-4" />
-                </div>
-                <span className="absolute -right-0.5 -bottom-0.5 h-3 w-3 rounded-full border-2 border-sidebar bg-foam" />
-              </div>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button className="relative" onClick={signOut} type="button">
+                    {user?.photoURL ? (
+                      <img
+                        alt={user.displayName ?? "Avatar"}
+                        className="h-9 w-9 rounded-full object-cover"
+                        height={36}
+                        src={user.photoURL}
+                        width={36}
+                      />
+                    ) : (
+                      <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/20 font-medium text-primary text-sm">
+                        {user?.displayName?.charAt(0) ?? "U"}
+                      </div>
+                    )}
+                    <span className="absolute -right-0.5 -bottom-0.5 h-3 w-3 rounded-full border-2 border-sidebar bg-foam" />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="right">
+                  <div className="flex items-center gap-2">
+                    <LogOut className="h-3 w-3" />
+                    Sair
+                  </div>
+                </TooltipContent>
+              </Tooltip>
               <div className="hidden md:block">
                 <div className="font-medium text-sidebar-foreground text-sm">
-                  User
+                  {user?.displayName ?? "Usuário"}
                 </div>
                 <div className="text-muted-foreground text-xs">
-                  user@email.com
+                  @{user?.username ?? ""}
                 </div>
               </div>
             </div>
